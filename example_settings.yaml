@@ -1,0 +1,10 @@
+StationName: Scanner Name
+VolcanoName: Cumbre Vieja
+DataPath: /hpme/pi/OpenSO2
+VentLocation:
+  - 28.614
+  - -17.867
+ScannerLocation:
+  - 28.633414
+  - -17.909092
+MapZoom: 11
