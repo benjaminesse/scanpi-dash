@@ -11,7 +11,7 @@ pip3 install virtualenv
 Clone the repository and enter:
 ```
 git clone https://github.com/benjaminesse/scanpi-dash.git
-cd ScanPiServer
+cd scanpi-dash
 ```
 
 Create the virtual environment and activate:
