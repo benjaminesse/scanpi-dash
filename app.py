@@ -56,7 +56,7 @@ df = pd.DataFrame(
      }
      }
 )
-print(config['MapZoom'])
+
 map_fig = px.scatter_mapbox(
     df, lat="lat", lon="lon", zoom=config['MapZoom'],
     hover_name=df.index, hover_data=[],
