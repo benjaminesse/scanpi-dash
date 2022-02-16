@@ -29,16 +29,21 @@ data_dates = pd.to_datetime(data_folders)
 disabled_days = [d for d in pd.date_range(data_dates.min(), tday_date)
                  if d not in data_dates]
 
-# Get the station status
-try:
-    with open(f"{config['DataPath']}/Station/status.txt", 'r') as r:
-        status_time, status_text = r.readline().split(' - ')
-        status_time = datetime.strptime(status_time, "%Y-%m-%d %H:%M:%S.%f"
-                                        ).strftime("%Y-%m-%d %H:%M:%S")
-except Exception as e:
-    status_text, status_time = f'Unknown ({e})', '???'
 
-# Generate the map plot
+def update_status():
+    # Get the station status
+    try:
+        with open(f"{config['DataPath']}/Station/status.txt", 'r') as r:
+            status_time, status_text = r.readline().split(' - ')
+            status_time = datetime.strptime(status_time, "%Y-%m-%d %H:%M:%S.%f"
+                                            ).strftime("%Y-%m-%d %H:%M:%S")
+    except Exception as e:
+        status_text, status_time = f'Unknown ({e})', '???'
+
+    return f"Current status: {status_text} (at {status_time})"
+
+
+# Generate the map data
 vlat, vlon = config['VentLocation']
 slat, slon = config['ScannerLocation']
 df = pd.DataFrame(
@@ -70,9 +75,7 @@ app = Dash(__name__, server=server, external_stylesheets=[dbc.themes.DARKLY])
 app.title = f"{config['StationName']} Dashboard"
 
 # =============================================================================
-# =============================================================================
-# App Layout
-# =============================================================================
+# App Controls
 # =============================================================================
 
 controls = dbc.Card(
@@ -160,11 +163,16 @@ controls = dbc.Card(
     body=True
 )
 
+# =============================================================================
+# App Plots
+# =============================================================================
+
 plots = dbc.Card(
     [
         html.Div(
             dcc.Graph(id="param-chart")
         ),
+        html.Hr(),
         html.Div(
             dcc.Graph(id="map-chart", figure=map_fig)
         )
@@ -172,10 +180,14 @@ plots = dbc.Card(
     body=True
 )
 
+# =============================================================================
+# App Layout
+# =============================================================================
+
 app.layout = dbc.Container(
     [
         html.H1(f"{config['StationName']} Dashboard"),
-        html.H5(f"Current status: {status_text} (at {status_time})"),
+        html.Div([dbc.Label(update_status())], id="status-text"),
         html.Hr(),
         dbc.Row(
             [
@@ -189,11 +201,14 @@ app.layout = dbc.Container(
 
 
 # =============================================================================
-# Server Callbacks
+# Callbacks
 # =============================================================================
 
 @app.callback(
-    Output("param-chart", "figure"),
+    [
+        Output("param-chart", "figure"),
+        Output("status-text", "children")
+    ],
     [
         Input("date-picker", "date"),
         Input("param-filter", "value"),
@@ -202,13 +217,14 @@ app.layout = dbc.Container(
         Input("refresh", "n_clicks")
     ]
 )
-def generate_plot(plot_date, plot_param, climhi, climlo, n):
-    """Callback to plot selected data."""
+def refresh(plot_date, plot_param, climhi, climlo, n):
+    """Callback to refresh the dashboard."""
+    # Get the path to the data
     fpath = f"{config['DataPath']}/Results/"
 
+    # Get the data files
     try:
-        scan_fnames = os.listdir(
-            f"{fpath}/{plot_date}/so2")
+        scan_fnames = os.listdir(f"{fpath}/{plot_date}/so2")
     except FileNotFoundError:
         df = pd.DataFrame(
             index=np.arange(0),
@@ -216,7 +232,7 @@ def generate_plot(plot_date, plot_param, climhi, climlo, n):
         )
         fig = px.scatter(df, x="Scan Time [UTC]", y="Scan Angle",
                          color=plot_param, range_color=[0, 1])
-        return fig
+        return [fig, [dbc.Label(update_status())]]
 
     # Initialize the DataFrame
     df = pd.DataFrame(index=np.arange(len(scan_fnames)*99),
@@ -273,7 +289,7 @@ def generate_plot(plot_date, plot_param, climhi, climlo, n):
     fig = px.scatter(df, x="Scan Time [UTC]", y="Scan Angle", color=plot_param,
                      range_color=limits)
 
-    return fig
+    return [fig, [dbc.Label(update_status())]]
 
 
 @app.callback(
