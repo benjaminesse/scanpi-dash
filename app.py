@@ -105,7 +105,8 @@ controls = dbc.Card(
                     value="SO2",
                     clearable=False,
                     searchable=False,
-                    className="dropdown"
+                    className="dropdown",
+                    style=dict(color="black")
                 )
             ]
         ),
@@ -282,7 +283,7 @@ def refresh(plot_date, plot_param, climhi, climlo, n):
     if climlo is None:
         climlo = df[plot_param].min()
     if climhi is None:
-        climlo = df[plot_param].max()
+        climhi = df[plot_param].max()
     limits = [climlo, climhi]
 
     # Generate the figure
