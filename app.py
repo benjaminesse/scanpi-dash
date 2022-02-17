@@ -15,7 +15,7 @@ with open("settings.yaml", "r") as ymlfile:
     config = yaml.load(ymlfile, Loader=yaml.FullLoader)
 
 # Set possible plot items
-plot_items = ["SO2", "O3", "int_av"]
+plot_items = ["SO2", "O3", "Ring", "int_av", "fit_quality"]
 
 # Get today's date
 tday_date = datetime.now().date()
@@ -47,27 +47,26 @@ def update_status():
 vlat, vlon = config['VentLocation']
 slat, slon = config['ScannerLocation']
 df = pd.DataFrame(
-    {"lat": {
-                config['StationName']: slat,
-                config['VolcanoName']: vlat
-             },
-     "lon": {
-                config['StationName']: slon,
-                config['VolcanoName']: vlon
-             },
-     "color": {
-                config['StationName']: "Red",
-                config['VolcanoName']: "Blue"
-     }
+    {
+        "name": [config["StationName"], config["VolcanoName"]],
+        "lat": [slat, vlat],
+        "lon": [slon, vlon],
+        "color": ["Red", "Blue"],
+        "size": [5, 5]
      }
 )
 
 map_fig = px.scatter_mapbox(
     df, lat="lat", lon="lon", zoom=config['MapZoom'],
-    hover_name=df.index, hover_data=[],
-    mapbox_style="stamen-terrain"
+    hover_data=["lat", "lon"],
+    mapbox_style="stamen-terrain",
+    color="color",
+    size="size",
+    hover_name="name",
+    text="name"
 )
 map_fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0})
+map_fig.update_layout(showlegend=False)
 
 # Setup the Dash app
 server = Flask(__name__)
@@ -229,15 +228,17 @@ def refresh(plot_date, plot_param, climhi, climlo, n):
     except FileNotFoundError:
         df = pd.DataFrame(
             index=np.arange(0),
-            columns=["Scan Time [UTC]", "Scan Angle", plot_param]
+            columns=["Scan Time (UTC)", "Scan Angle (deg)", plot_param]
         )
-        fig = px.scatter(df, x="Scan Time [UTC]", y="Scan Angle",
+        fig = px.scatter(df, x="Scan Time (UTC)", y="Scan Angle (deg)",
                          color=plot_param, range_color=[0, 1])
         return [fig, [dbc.Label(update_status())]]
 
     # Initialize the DataFrame
-    df = pd.DataFrame(index=np.arange(len(scan_fnames)*99),
-                      columns=["Scan Time [UTC]", "Scan Angle", plot_param])
+    df = pd.DataFrame(
+        index=np.arange(len(scan_fnames)*99),
+        columns=["Scan Time (UTC)", "Scan Angle (deg)", plot_param]
+    )
     n = 0
 
     # Iterate through the files
@@ -274,7 +275,7 @@ def refresh(plot_date, plot_param, climhi, climlo, n):
             n += 1
 
     # Remove row with nan times
-    df = df[df["Scan Time [UTC]"].notna()]
+    df = df[df["Scan Time (UTC)"].notna()]
 
     # Set nan values to zero
     df = df.fillna(0)
@@ -287,8 +288,8 @@ def refresh(plot_date, plot_param, climhi, climlo, n):
     limits = [climlo, climhi]
 
     # Generate the figure
-    fig = px.scatter(df, x="Scan Time [UTC]", y="Scan Angle", color=plot_param,
-                     range_color=limits)
+    fig = px.scatter(df, x="Scan Time (UTC)", y="Scan Angle (deg)",
+                     color=plot_param, range_color=limits)
 
     return [fig, [dbc.Label(update_status())]]
 
